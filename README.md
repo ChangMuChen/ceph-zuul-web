@@ -10,6 +10,7 @@ CEPH 安装：
 https://github.com/ChangMuChen/DevOps/tree/master/CEPH%E5%88%86%E5%B8%83%E5%BC%8F%E5%AD%98%E5%82%A8%E7%B3%BB%E7%BB%9F
 
 # CEPH - CORS Config
+```xml
 <CORSConfiguration xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
   <CORSRule>
     <AllowedMethod>GET</AllowedMethod>
@@ -21,4 +22,4 @@ https://github.com/ChangMuChen/DevOps/tree/master/CEPH%E5%88%86%E5%B8%83%E5%BC%8
     <ExposeHeader>ETag</ExposeHeader>
   </CORSRule>
 </CORSConfiguration>
-
+```
