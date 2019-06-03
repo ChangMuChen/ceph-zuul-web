@@ -1,0 +1,23 @@
+server:
+  port: 8989
+
+ceph:
+  accessKeyId: D6SK4TED4GDR00QKAA6H
+  secretAccessKey: dGD3xrBEoDTp3k9Ux1Wa9PiQdzJovlDdUBz8NOGD
+
+zuul:
+  host:
+    connect-timeout-millis: 15000
+    socket-timeout-millis: 60000
+  add-proxy-headers: false
+  sensitive-headers:
+  routes:
+    traditional-url:
+      path: /ceph/**
+      url: http://192.168.40.140:7480/new-bucket-4ed036c5/
+      stripPrefix: true
+  ignored-headers: Access-Control-Allow-Origin
+
+ribbon:
+  ReadTimeout: 10000
+  ConnectTimeout: 10000
