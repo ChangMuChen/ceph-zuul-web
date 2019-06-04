@@ -10,14 +10,28 @@ zuul:
     connect-timeout-millis: 15000
     socket-timeout-millis: 60000
   add-proxy-headers: false
-  sensitive-headers:
+  ignored-headers: Access-Control-Allow-Origin
+  sensitiveHeaders:
   routes:
-    traditional-url:
+    cephroute:
       path: /ceph/**
       url: http://192.168.40.140:7480/new-bucket-4ed036c5/
       stripPrefix: true
-  ignored-headers: Access-Control-Allow-Origin
+
+
 
 ribbon:
   ReadTimeout: 10000
   ConnectTimeout: 10000
+
+
+security:
+  oauth2:
+    baseurl: http://localhost:8989
+    resource:
+      token-info-uri: ${security.oauth2.baseurl}/oauth/check_token
+    client:
+      accessTokenUri: ${security.oauth2.baseurl}/oauth/token
+      userAuthorizationUri: ${security.oauth2.baseurl}/oauth/authorize
+      clientId: client
+      clientSecret: 123456

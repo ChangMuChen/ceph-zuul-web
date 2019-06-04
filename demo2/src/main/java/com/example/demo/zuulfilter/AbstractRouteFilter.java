@@ -1,4 +1,4 @@
-package com.example.demo;
+package com.example.demo.zuulfilter;
 
 import com.netflix.zuul.ZuulFilter;
 import org.springframework.cloud.netflix.zuul.filters.Route;

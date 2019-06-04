@@ -17,8 +17,8 @@ public class BinaryUtils {
      */
     public static String toHex(byte[] data) {
         StringBuilder sb = new StringBuilder(data.length * 2);
-        for (int i = 0; i < data.length; i++) {
-            String hex = Integer.toHexString(data[i]);
+        for (byte datum : data) {
+            String hex = Integer.toHexString(datum);
             if (hex.length() == 1) {
                 // Append leading zero.
                 sb.append("0");

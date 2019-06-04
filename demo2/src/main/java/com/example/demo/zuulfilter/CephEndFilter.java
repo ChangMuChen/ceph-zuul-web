@@ -1,4 +1,4 @@
-package com.example.demo;
+package com.example.demo.zuulfilter;
 
 import com.netflix.util.Pair;
 import com.netflix.zuul.context.RequestContext;
@@ -6,6 +6,7 @@ import io.micrometer.core.ipc.http.HttpSender;
 import org.apache.http.impl.io.EmptyInputStream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cloud.netflix.zuul.filters.Route;
 import org.springframework.cloud.netflix.zuul.filters.RouteLocator;
 import org.springframework.cloud.netflix.zuul.filters.support.FilterConstants;
 import org.springframework.web.util.UrlPathHelper;
@@ -24,11 +25,11 @@ import java.io.InputStream;
 import java.io.StringWriter;
 import java.util.List;
 
-public class EndFilter extends AbstractRouteFilter {
+public class CephEndFilter extends AbstractRouteFilter {
 
-    private Logger logger = LoggerFactory.getLogger(EndFilter.class);
+    private Logger logger = LoggerFactory.getLogger(CephEndFilter.class);
 
-    public EndFilter(RouteLocator routeLocator, UrlPathHelper urlPathHelper) {
+    public CephEndFilter(RouteLocator routeLocator, UrlPathHelper urlPathHelper) {
         super(routeLocator, urlPathHelper);
     }
 
@@ -57,11 +58,17 @@ public class EndFilter extends AbstractRouteFilter {
 
     @Override
     public Object run() {
+
         RequestContext context = RequestContext.getCurrentContext();
-        context.addZuulRequestHeader("Access-Control-Allow-Origin", "*");
-        if (context.getRequest().getMethod().toLowerCase().equals(HttpSender.Method.GET.toString().toLowerCase()))
+
+        Route route = route(context.getRequest());
+        if (!route.getId().equals("cephroute"))
             return null;
 
+        context.addZuulRequestHeader("Access-Control-Allow-Origin", "*");
+
+        if (context.getRequest().getMethod().toLowerCase().equals(HttpSender.Method.GET.toString().toLowerCase()))
+            return null;
         try {
             List<Pair<String, String>> headers = context.getZuulResponseHeaders();
             boolean havedown = false;

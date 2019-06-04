@@ -1,4 +1,4 @@
-package com.example.demo;
+package com.example.demo.zuulfilter;
 
 import com.example.demo.auth.AWS4SignerBase;
 import com.example.demo.auth.AWS4SignerForAuthorizationHeader;
@@ -20,11 +20,11 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
-public class BeginFilter extends AbstractRouteFilter {
+public class CephBeginFilter extends AbstractRouteFilter {
 
-    private Logger logger = LoggerFactory.getLogger(BeginFilter.class);
+    private Logger logger = LoggerFactory.getLogger(CephBeginFilter.class);
 
-    public BeginFilter(RouteLocator routeLocator, UrlPathHelper urlPathHelper) {
+    public CephBeginFilter(RouteLocator routeLocator, UrlPathHelper urlPathHelper) {
         super(routeLocator, urlPathHelper);
     }
 
@@ -75,13 +75,15 @@ public class BeginFilter extends AbstractRouteFilter {
         RequestContext ctx = RequestContext.getCurrentContext();
 
         Route route = route(ctx.getRequest());
+        if (!route.getId().equals("cephroute"))
+            return null;
+
         URL endpointUrl = null;
         try {
             endpointUrl = new URL(HttpUtils.CombinePath(route.getLocation(), route.getPath()));
         } catch (MalformedURLException e) {
             e.printStackTrace();
         }
-
 
         Map<String, String> hh = getHeadersInfo();
         Map<String, String> headers = new HashMap<>();
@@ -123,8 +125,7 @@ public class BeginFilter extends AbstractRouteFilter {
                 secretAccessKey);
 
         ctx.addZuulRequestHeader("x-amz-date", headers.get("x-amz-date"));
-        ctx.addZuulRequestHeader("authorization", authorization);
-
+        ctx.addZuulRequestHeader("Authorization", authorization);
         ctx.addZuulRequestHeader("host", ctx.getRequest().getServerName() + ":" + ctx.getRequest().getServerPort());
         return null;
     }
