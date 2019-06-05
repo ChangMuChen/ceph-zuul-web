@@ -23,3 +23,5 @@ https://github.com/ChangMuChen/DevOps/tree/master/CEPH%E5%88%86%E5%B8%83%E5%BC%8
   </CORSRule>
 </CORSConfiguration>
 ```
+**效果如下：**
+![](https://i.imgur.com/opKaj1b.png)
