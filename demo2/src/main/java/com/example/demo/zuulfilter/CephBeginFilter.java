@@ -50,7 +50,7 @@ public class CephBeginFilter extends AbstractRouteFilter {
     public boolean shouldFilter() {
         RequestContext ctx = RequestContext.getCurrentContext();
         Route route = route(ctx.getRequest());
-        if (!route.getId().equals("cephroute"))
+        if (!route.getId().equals("ceph-upload")&&!route.getId().equals("ceph-download"))
             return false;
         if(ctx.getRequest().getMethod().toLowerCase().equals("options"))
             return false;

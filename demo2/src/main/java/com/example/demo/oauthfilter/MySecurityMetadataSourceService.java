@@ -39,11 +39,17 @@ public class MySecurityMetadataSourceService implements FilterInvocationSecurity
         configs2.add(config2);
         this.requestMap.put(matcher2, configs2);
 
-        AntPathRequestMatcher matcher3 = new AntPathRequestMatcher("/**/ceph/**");
+        AntPathRequestMatcher matcher3 = new AntPathRequestMatcher("/**/ceph-upload/**");
         SecurityConfig config3 = new SecurityConfig("user");
         ArrayList<ConfigAttribute> configs3 = new ArrayList<>();
         configs3.add(config3);
         this.requestMap.put(matcher3, configs3);
+
+        AntPathRequestMatcher matcher4 = new AntPathRequestMatcher("/**/ceph-download/**");
+        SecurityConfig config4 = new SecurityConfig("user");
+        ArrayList<ConfigAttribute> configs4 = new ArrayList<>();
+        configs4.add(config4);
+        this.requestMap.put(matcher4, configs4);
 
         String[] urls = permitProvider.getpermiturls();
 

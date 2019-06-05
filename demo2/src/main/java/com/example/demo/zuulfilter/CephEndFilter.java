@@ -51,9 +51,11 @@ public class CephEndFilter extends AbstractRouteFilter {
     public boolean shouldFilter() {
         RequestContext ctx = RequestContext.getCurrentContext();
         Route route = route(ctx.getRequest());
-        if (!route.getId().equals("cephroute"))
+        if (!route.getId().equals("ceph-upload") && !route.getId().equals("ceph-download"))
             return false;
         if (ctx.getRequest().getMethod().toLowerCase().equals("options"))
+            return false;
+        if (ctx.getRequest().getMethod().toLowerCase().equals("get"))
             return false;
 
         List<Pair<String, String>> headers = ctx.getZuulResponseHeaders();
@@ -78,8 +80,9 @@ public class CephEndFilter extends AbstractRouteFilter {
         if (context.getRequest().getMethod().toLowerCase().equals(HttpSender.Method.GET.toString().toLowerCase()))
             return null;
         try {
-
-            String location = context.getRequest().getRequestURL().toString() + (fileversion.isEmpty() ? "" : "?versionId=" + fileversion);
+            String requesturl = context.getRequest().getRequestURL().toString();
+            requesturl = requesturl.replaceFirst("ceph-upload", "ceph-download");
+            String location = requesturl + (fileversion.isEmpty() ? "" : "?versionId=" + fileversion);
             String bucket = "ceph";
             String key;
             String etag;
@@ -108,26 +111,6 @@ public class CephEndFilter extends AbstractRouteFilter {
                     "<Key>" + key + "</Key>" +
                     "<ETag>" + etag + "</ETag>" +
                     "</CompleteMultipartUploadResult>");
-
-//
-//            NodeList nodeList = document.getElementsByTagName("Location");
-//            if (nodeList == null || nodeList.getLength() < 1) return null;
-//
-//            Node element = nodeList.item(0);
-//
-//            element.setTextContent(context.getRequest().getRequestURL().toString() + (fileversion.isEmpty() ? "" : ("?versionId=" + fileversion)));
-//
-//            TransformerFactory tf = TransformerFactory.newInstance();
-//            Transformer transformer = tf.newTransformer();
-//            DOMSource source = new DOMSource(document);
-//            transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
-//            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-//            StringWriter writer = new StringWriter();
-//            StreamResult result = new StreamResult(writer);
-//            transformer.transform(source, result);
-//            String returnStr = writer.getBuffer().toString();
-
-//            context.setResponseBody(returnStr);
         } catch (Exception e) {
             e.printStackTrace();
         }

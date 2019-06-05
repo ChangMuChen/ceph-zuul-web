@@ -13,8 +13,12 @@ zuul:
   ignored-headers: Access-Control-Allow-Origin
   sensitiveHeaders:
   routes:
-    cephroute:
-      path: /ceph/**
+    ceph-upload:
+      path: /ceph-upload/**
+      url: http://192.168.40.140:7480/new-bucket-4ed036c5/
+      stripPrefix: true
+    ceph-download:
+      path: /ceph-download/**
       url: http://192.168.40.140:7480/new-bucket-4ed036c5/
       stripPrefix: true
 
