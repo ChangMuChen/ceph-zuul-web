@@ -37,7 +37,7 @@ public class CephBeginFilter extends AbstractRouteFilter {
         error：处理请求时发生错误时被调用
         * */
         // 前置过滤器
-        return FilterConstants.PRE_TYPE;
+        return FilterConstants.ROUTE_TYPE;
     }
 
     @Override
@@ -48,6 +48,12 @@ public class CephBeginFilter extends AbstractRouteFilter {
 
     @Override
     public boolean shouldFilter() {
+        RequestContext ctx = RequestContext.getCurrentContext();
+        Route route = route(ctx.getRequest());
+        if (!route.getId().equals("cephroute"))
+            return false;
+        if(ctx.getRequest().getMethod().toLowerCase().equals("options"))
+            return false;
         return true;
     }
 
@@ -75,8 +81,6 @@ public class CephBeginFilter extends AbstractRouteFilter {
         RequestContext ctx = RequestContext.getCurrentContext();
 
         Route route = route(ctx.getRequest());
-        if (!route.getId().equals("cephroute"))
-            return null;
 
         URL endpointUrl = null;
         try {
@@ -125,8 +129,8 @@ public class CephBeginFilter extends AbstractRouteFilter {
                 secretAccessKey);
 
         ctx.addZuulRequestHeader("x-amz-date", headers.get("x-amz-date"));
-        ctx.addZuulRequestHeader("Authorization", authorization);
-        ctx.addZuulRequestHeader("host", ctx.getRequest().getServerName() + ":" + ctx.getRequest().getServerPort());
+        ctx.addZuulRequestHeader("authorization", authorization);
+        ctx.addZuulRequestHeader("host", headers.get("host"));
         return null;
     }
 }

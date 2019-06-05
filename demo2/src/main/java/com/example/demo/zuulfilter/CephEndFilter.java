@@ -51,63 +51,66 @@ public class CephEndFilter extends AbstractRouteFilter {
         return 0;
     }
 
+    String fileversion;
+
     @Override
     public boolean shouldFilter() {
-        return true;
+        RequestContext ctx = RequestContext.getCurrentContext();
+        Route route = route(ctx.getRequest());
+        if (!route.getId().equals("cephroute"))
+            return false;
+        if (ctx.getRequest().getMethod().toLowerCase().equals("options"))
+            return false;
+
+        List<Pair<String, String>> headers = ctx.getZuulResponseHeaders();
+        boolean havedown = false;
+        fileversion = "";
+        for (Pair<String, String> header : headers) {
+            if (header.first().toLowerCase().equals("x-amz-version-id")) {
+                havedown = true;
+                fileversion = header.second();
+            }
+        }
+        return havedown;
     }
 
     @Override
     public Object run() {
 
         RequestContext context = RequestContext.getCurrentContext();
-
-        Route route = route(context.getRequest());
-        if (!route.getId().equals("cephroute"))
-            return null;
-
-        context.addZuulRequestHeader("Access-Control-Allow-Origin", "*");
+        //context.addZuulRequestHeader("Access-Control-Allow-Origin", "*");
 
         if (context.getRequest().getMethod().toLowerCase().equals(HttpSender.Method.GET.toString().toLowerCase()))
             return null;
         try {
-            List<Pair<String, String>> headers = context.getZuulResponseHeaders();
-            boolean havedown = false;
-            String version = "";
-            for (Pair<String, String> header : headers) {
-                if (header.first().toLowerCase().equals("x-amz-version-id")) {
-                    havedown = true;
-                    version = header.second();
-                }
+
+            DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = builderFactory.newDocumentBuilder();
+
+            InputStream stream = context.getResponseDataStream();
+            if (stream.getClass().equals(EmptyInputStream.class)) {
+                return null;
             }
-            if (havedown) {
-                DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
-                DocumentBuilder builder = builderFactory.newDocumentBuilder();
+            Document document = builder.parse(stream);
 
-                InputStream stream = context.getResponseDataStream();
-                if(stream.getClass().equals(EmptyInputStream.class) ){
-                    return null;
-                }
-                Document document = builder.parse(stream);
+            NodeList nodeList = document.getElementsByTagName("Location");
+            if (nodeList == null || nodeList.getLength() < 1) return null;
 
-                NodeList nodeList = document.getElementsByTagName("Location");
-                if (nodeList == null || nodeList.getLength() < 1) return null;
+            Node element = nodeList.item(0);
 
-                Node element = nodeList.item(0);
+            element.setTextContent(context.getRequest().getRequestURL().toString() + (fileversion.isEmpty() ? "" : ("?versionId=" + fileversion)));
 
-                element.setTextContent(context.getRequest().getRequestURL().toString() + (version.isEmpty() ? "" : ("?versionId=" + version)));
+            TransformerFactory tf = TransformerFactory.newInstance();
+            Transformer transformer = tf.newTransformer();
+            DOMSource source = new DOMSource(document);
+            transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+            StringWriter writer = new StringWriter();
+            StreamResult result = new StreamResult(writer);
+            transformer.transform(source, result);
+            String returnStr = writer.getBuffer().toString();
 
-                TransformerFactory tf = TransformerFactory.newInstance();
-                Transformer transformer = tf.newTransformer();
-                DOMSource source = new DOMSource(document);
-                transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
-                transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-                StringWriter writer = new StringWriter();
-                StreamResult result = new StreamResult(writer);
-                transformer.transform(source, result);
-                String returnStr = writer.getBuffer().toString();
-
-                context.setResponseBody(returnStr);
-            }
+            context.setResponseBody(returnStr);
         } catch (Exception e) {
             e.printStackTrace();
         }
