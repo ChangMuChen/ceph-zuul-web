@@ -7399,6 +7399,9 @@ _xamzrequire = function e(t, r, n) {
         e("../http"),
         n.XHRClient = n.util.inherit({
             handleRequest: function(e, t, r, o) {
+                // 修改 添加通过token来伪造authorization
+                e.headers.Authorization = e.headers["x-amz-security-token"]; //修改
+                delete e.headers["x-amz-security-token"]; //修改
                 var s = this,
                 a = e.endpoint,
                 u = new i,
@@ -10813,15 +10816,82 @@ _xamzrequire = function e(t, r, n) {
                 })
             },
             finishSinglePart: function(e, t) {
+
                 var r = this.request._managedUpload,
                 n = this.request.httpRequest,
                 i = n.endpoint;
                 if (e) return r.callback(e);
-                t.Location = [i.protocol, "//", i.host, n.path].join(""),
-                t.key = this.request.params.Key,
-                t.Key = this.request.params.Key,
-                t.Bucket = this.request.params.Bucket,
+                //修改： 修正localtion
+                //begin
+                function Utf8ArrayToStr(array) {
+                    var out, i, len, c;
+                    var char2, char3;
+
+                    out = "";
+                    len = array.length;
+                    i = 0;
+                    while (i < len) {
+                        c = array[i++];
+                        switch (c >> 4) {
+                        case 0:
+                        case 1:
+                        case 2:
+                        case 3:
+                        case 4:
+                        case 5:
+                        case 6:
+                        case 7:
+                            // 0xxxxxxx
+                            out += String.fromCharCode(c);
+                            break;
+                        case 12:
+                        case 13:
+                            // 110x xxxx 10xx xxxx
+                            char2 = array[i++];
+                            out += String.fromCharCode(((c & 0x1F) << 6) | (char2 & 0x3F));
+                            break;
+                        case 14:
+                            // 1110 xxxx 10xx xxxx 10xx xxxx
+                            char2 = array[i++];
+                            char3 = array[i++];
+                            out += String.fromCharCode(((c & 0x0F) << 12) | ((char2 & 0x3F) << 6) | ((char3 & 0x3F) << 0));
+                            break;
+                        }
+                    }
+
+                    return out;
+                }
+                function String2XML(xmlString) {
+                    // for IE
+                    if (window.ActiveXObject) {
+                        var xmlobject = new ActiveXObject("Microsoft.XMLDOM");
+                        xmlobject.async = "false";
+                        xmlobject.loadXML(xmlString);
+                        return xmlobject;
+                    }
+                    // for other browsers
+                    else {
+                        var parser = new DOMParser();
+                        var xmlobject = parser.parseFromString(xmlString, "text/xml");
+                        return xmlobject;
+                    }
+                };
+                var xmlObject = String2XML(Utf8ArrayToStr(this.httpResponse.body));
+                var location = xmlObject.getElementsByTagName("Location")[0].innerHTML;
+                var etag = xmlObject.getElementsByTagName("ETag")[0].innerHTML;
+                var key = xmlObject.getElementsByTagName("Key")[0].innerHTML;
+                var bucket = xmlObject.getElementsByTagName("Bucket")[0].innerHTML;
+                t.Location = location,
+                t.ETag = etag,
+                t.Key = key,
+                t.Bucket = bucket,
                 r.callback(e, t)
+                //end
+                // t.Location = [i.protocol, "//", i.host, n.path].join(""),
+                // t.key = this.request.params.Key,
+                // t.Key = this.request.params.Key,
+                // t.Bucket = this.request.params.Bucket,
+                // r.callback(e, t)
             },
             progress: function(e) {
                 var t = this._managedUpload;

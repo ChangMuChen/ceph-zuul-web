@@ -11,18 +11,11 @@ import org.springframework.cloud.netflix.zuul.filters.RouteLocator;
 import org.springframework.cloud.netflix.zuul.filters.support.FilterConstants;
 import org.springframework.web.util.UrlPathHelper;
 import org.w3c.dom.Document;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 import java.io.InputStream;
-import java.io.StringWriter;
+import java.net.URLDecoder;
 import java.util.List;
 
 public class CephEndFilter extends AbstractRouteFilter {
@@ -52,6 +45,7 @@ public class CephEndFilter extends AbstractRouteFilter {
     }
 
     String fileversion;
+    String etagheader;
 
     @Override
     public boolean shouldFilter() {
@@ -70,47 +64,70 @@ public class CephEndFilter extends AbstractRouteFilter {
                 havedown = true;
                 fileversion = header.second();
             }
+            if (header.first().toLowerCase().equals("etag")) {
+                etagheader = header.second();
+            }
         }
         return havedown;
     }
 
     @Override
     public Object run() {
-
         RequestContext context = RequestContext.getCurrentContext();
-        //context.addZuulRequestHeader("Access-Control-Allow-Origin", "*");
 
         if (context.getRequest().getMethod().toLowerCase().equals(HttpSender.Method.GET.toString().toLowerCase()))
             return null;
         try {
 
-            DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder builder = builderFactory.newDocumentBuilder();
+            String location = context.getRequest().getRequestURL().toString() + (fileversion.isEmpty() ? "" : "?versionId=" + fileversion);
+            String bucket = "ceph";
+            String key;
+            String etag;
 
-            InputStream stream = context.getResponseDataStream();
-            if (stream.getClass().equals(EmptyInputStream.class)) {
-                return null;
+            if (etagheader != null && !etagheader.isEmpty()) {
+                etag = etagheader;
+                String[] temp = URLDecoder.decode(context.getRequest().getRequestURI(), "UTF-8").split("/");
+                key = temp[temp.length - 1];
+            } else {
+                DocumentBuilderFactory builderFactory = DocumentBuilderFactory.newInstance();
+                DocumentBuilder builder = builderFactory.newDocumentBuilder();
+
+                InputStream stream = context.getResponseDataStream();
+                if (stream.getClass().equals(EmptyInputStream.class)) {
+                    return null;
+                }
+                Document document = builder.parse(stream);
+                etag = document.getElementsByTagName("ETag").item(0).getTextContent();
+                key = document.getElementsByTagName("Key").item(0).getTextContent();
             }
-            Document document = builder.parse(stream);
+            context.getResponse().setCharacterEncoding("UTF-8");
+            context.setResponseBody("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+                    "<CompleteMultipartUploadResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">" +
+                    "<Location>" + location + "</Location>" +
+                    "<Bucket>" + bucket + "</Bucket>" +
+                    "<Key>" + key + "</Key>" +
+                    "<ETag>" + etag + "</ETag>" +
+                    "</CompleteMultipartUploadResult>");
 
-            NodeList nodeList = document.getElementsByTagName("Location");
-            if (nodeList == null || nodeList.getLength() < 1) return null;
+//
+//            NodeList nodeList = document.getElementsByTagName("Location");
+//            if (nodeList == null || nodeList.getLength() < 1) return null;
+//
+//            Node element = nodeList.item(0);
+//
+//            element.setTextContent(context.getRequest().getRequestURL().toString() + (fileversion.isEmpty() ? "" : ("?versionId=" + fileversion)));
+//
+//            TransformerFactory tf = TransformerFactory.newInstance();
+//            Transformer transformer = tf.newTransformer();
+//            DOMSource source = new DOMSource(document);
+//            transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+//            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+//            StringWriter writer = new StringWriter();
+//            StreamResult result = new StreamResult(writer);
+//            transformer.transform(source, result);
+//            String returnStr = writer.getBuffer().toString();
 
-            Node element = nodeList.item(0);
-
-            element.setTextContent(context.getRequest().getRequestURL().toString() + (fileversion.isEmpty() ? "" : ("?versionId=" + fileversion)));
-
-            TransformerFactory tf = TransformerFactory.newInstance();
-            Transformer transformer = tf.newTransformer();
-            DOMSource source = new DOMSource(document);
-            transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
-            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
-            StringWriter writer = new StringWriter();
-            StreamResult result = new StreamResult(writer);
-            transformer.transform(source, result);
-            String returnStr = writer.getBuffer().toString();
-
-            context.setResponseBody(returnStr);
+//            context.setResponseBody(returnStr);
         } catch (Exception e) {
             e.printStackTrace();
         }
